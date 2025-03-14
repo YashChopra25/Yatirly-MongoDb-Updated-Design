@@ -1,0 +1,196 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: #ffffff;
+    --foreground: #1a1d2d;
+    --card: #ffffff;
+    --card-foreground: #1a1d2d;
+    --border: #e5e7eb;
+    --input: #ffffff;
+    --input-foreground: #1a1d2d;
+    --input-border: #e5e7eb;
+    --input-placeholder: #9ca3af;
+    --ring: #635bc9;
+    --theme-primary: var(--theme-gradient-from);
+    --theme-primary-foreground: #ffffff;
+  }
+
+  .dark {
+    --background: #0f1117;
+    --foreground: #eef1ff;
+    --card: #151821;
+    --card-foreground: #eef1ff;
+    --border: #2a2f3d;
+    --input: #151821;
+    --input-foreground: #eef1ff;
+    --input-border: #2a2f3d;
+    --input-placeholder: #6b7280;
+    --ring: #635bc9;
+    --theme-primary: var(--theme-gradient-from);
+    --theme-primary-foreground: #ffffff;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground transition-colors duration-300;
+    font-feature-settings: "rlig" 1, "calt" 1;
+  }
+
+  /* Input styles */
+  input,
+  textarea,
+  select {
+    @apply bg-[var(--input)] text-[var(--input-foreground)] border-[var(--input-border)] placeholder:text-[var(--input-placeholder)];
+  }
+}
+
+@layer components {
+  /* File input specific styles */
+  .file-input {
+    @apply relative cursor-pointer;
+  }
+
+  .file-input::file-selector-button {
+    @apply bg-[var(--theme-primary)] bg-opacity-20 text-[var(--theme-primary)] border-0 rounded-lg px-4 py-2 mr-4 cursor-pointer transition-colors duration-200;
+  }
+
+  .file-input:hover::file-selector-button {
+    @apply bg-opacity-30;
+  }
+}
+
+/* Theme-specific styles */
+[data-theme="purple"] {
+  --theme-primary: #635bc9;
+  --theme-primary-hover: #7367d6;
+  --theme-gradient-from: #635bc9;
+  --theme-gradient-to: #8b84e5;
+}
+
+[data-theme="blue"] {
+  --theme-primary: #2563eb;
+  --theme-primary-hover: #1d4ed8;
+  --theme-gradient-from: #2563eb;
+  --theme-gradient-to: #3b82f6;
+}
+
+[data-theme="green"] {
+  --theme-primary: #059669;
+  --theme-primary-hover: #047857;
+  --theme-gradient-from: #059669;
+  --theme-gradient-to: #10b981;
+}
+
+[data-theme="rose"] {
+  --theme-primary: #e11d48;
+  --theme-primary-hover: #be123c;
+  --theme-gradient-from: #e11d48;
+  --theme-gradient-to: #f43f5e;
+}
+
+[data-theme="orange"] {
+  --theme-primary: #ea580c;
+  --theme-primary-hover: #c2410c;
+  --theme-gradient-from: #ea580c;
+  --theme-gradient-to: #f97316;
+}
+
+/* Common theme classes */
+.theme-gradient {
+  @apply bg-gradient-to-r from-[var(--theme-gradient-from)] to-[var(--theme-gradient-to)];
+}
+
+.theme-text-gradient {
+  @apply bg-clip-text text-transparent bg-gradient-to-r from-[var(--theme-gradient-from)] to-[var(--theme-gradient-to)];
+}
+
+.theme-border {
+  @apply border-[var(--theme-primary)];
+}
+
+.theme-bg {
+  @apply bg-[var(--theme-primary)];
+}
+
+.theme-text {
+  @apply text-[var(--theme-primary)];
+}
+
+.theme-hover {
+  @apply hover:bg-[var(--theme-primary-hover)];
+}
+
+/* Dark mode overrides */
+.dark .dark\:bg-dark {
+  background-color: var(--background);
+}
+
+.dark .dark\:bg-card {
+  background-color: var(--card);
+}
+
+.dark .dark\:border-dark {
+  border-color: var(--border);
+}
+
+.dark .dark\:text-light {
+  color: var(--foreground);
+}
+
+@keyframes blob {
+  0% {
+    transform: translate(0px, 0px) scale(1);
+  }
+  33% {
+    transform: translate(30px, -50px) scale(1.1);
+  }
+  66% {
+    transform: translate(-20px, 20px) scale(0.9);
+  }
+  100% {
+    transform: translate(0px, 0px) scale(1);
+  }
+}
+
+.animate-blob {
+  animation: blob 7s infinite;
+}
+
+.animation-delay-2000 {
+  animation-delay: 2s;
+}
+
+.animation-delay-4000 {
+  animation-delay: 4s;
+}
+
+.bg-grid-white {
+  background-size: 20px 20px;
+  background-image: linear-gradient(to right, rgba(255, 255, 255, 0.05) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(255, 255, 255, 0.05) 1px, transparent 1px);
+}
+
+.dark .bg-grid-white {
+  background-image: linear-gradient(to right, rgba(255, 255, 255, 0.03) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
+}
+
+@keyframes bounce-x {
+  0%, 100% {
+    transform: translateX(0);
+  }
+  50% {
+    transform: translateX(5px);
+  }
+}
+
+.animate-bounce-x {
+  animation: bounce-x 1s infinite;
+} 

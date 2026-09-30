@@ -1,8 +1,4 @@
-import {
-  SidebarMenu,
-  SidebarMenuItem,
-  SidebarMenuButton,
-} from "@/components/ui/sidebar";
+import { SidebarMenu, SidebarMenuItem, SidebarMenuButton, useSidebar } from "@/components/ui/sidebar";
 import { NavigationTypes } from "@/Types";
 import { items } from "@/utils/NavbarOptions";
 import { Link2, LogOut } from "lucide-react";
@@ -12,12 +8,16 @@ import axiosInstance from "@/api/axiosInstance";
 import ToastFn from "@/components/Toaster";
 import { useAppDispatch } from "@/store/auth.store";
 import { logoutFn } from "@/slices/auth.slice";
+import { cn } from "@/lib/utils";
 
-// Menu items.
+const rowClass =
+  "relative h-11 gap-3 rounded-xl px-3 text-sm font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-foreground";
 
 const Navigation = ({ handlerClick, activeTab }: NavigationTypes) => {
   const navigate = useNavigate();
-const dispatch = useAppDispatch();
+  const dispatch = useAppDispatch();
+  const { setOpenMobile } = useSidebar();
+
   const handleLogout = async () => {
     try {
       const { data } = await axiosInstance.get("/api/v1/auth/user/logout");
@@ -26,7 +26,7 @@ const dispatch = useAppDispatch();
         return;
       }
       navigate("/");
-      dispatch(logoutFn())
+      dispatch(logoutFn());
     } catch (error) {
       console.error("Logout error:", error);
       ToastFn("error", "Error", "Failed to logout");
@@ -34,85 +34,65 @@ const dispatch = useAppDispatch();
   };
 
   return (
-    <div className="bg-card/50 backdrop-blur-sm rounded-2xl border border-border/50 p-4">
-      <SidebarMenu>
-        {items.map((item, index) => (
-          <motion.div
-            key={item.query}
-            initial={{ opacity: 0, x: -20 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ delay: index * 0.1 }}
-          >
-            <SidebarMenuItem className={activeTab === item.query ? "active" : ""}>
-              <SidebarMenuButton
-                asChild
-                className={`
-                  relative overflow-hidden rounded-xl transition-all duration-300
-                  ${activeTab === item.query 
-                    ? "bg-theme-primary text-white shadow-lg shadow-theme-primary/25" 
-                    : "hover:bg-theme-primary/10"
-                  }
-                `}
-              >
-                <Link
-                  to={`/dashboard?tab=${item.query}`}
-                  onClick={(e) => {
-                    e.preventDefault();
-                    handlerClick(item.query);
-                  }}
-                  className="p-4 flex items-center gap-3"
-                >
-                  <item.icon className="w-5 h-5" />
-                  <span className="font-medium capitalize">{item.query}</span>
-                  {activeTab === item.query && (
-                    <motion.div
-                      className="absolute inset-0 bg-white/10"
-                      layoutId="activeTab"
-                      transition={{ type: "spring", bounce: 0.2, duration: 0.6 }}
-                    />
-                  )}
-                </Link>
-              </SidebarMenuButton>
-            </SidebarMenuItem>
-          </motion.div>
-        ))}
+    <div className="flex h-full flex-col gap-6 py-3">
+      <div className="space-y-2">
+        <p className="eyebrow px-3">Board</p>
+        <SidebarMenu className="gap-1">
+          {items.map((item) => {
+            const isActive = activeTab === item.query;
+            return (
+              <SidebarMenuItem key={item.query}>
+                <SidebarMenuButton asChild className={cn(rowClass, isActive && "text-foreground hover:bg-transparent")}>
+                  <Link
+                    to={`/dashboard?tab=${item.query}`}
+                    onClick={(e) => {
+                      e.preventDefault();
+                      handlerClick(item.query);
+                      setOpenMobile(false);
+                    }}
+                  >
+                    {isActive && (
+                      <motion.span
+                        layoutId="dashboard-nav"
+                        className="absolute inset-0 rounded-xl border border-border bg-accent"
+                        transition={{ type: "spring", stiffness: 500, damping: 40 }}
+                      />
+                    )}
+                    {isActive && (
+                      <span className="absolute left-0 top-1/2 h-5 w-1 -translate-y-1/2 rounded-r-full bg-theme-primary shadow-[0_0_10px_rgb(var(--tp))]" />
+                    )}
+                    <item.icon className={cn("relative h-[18px] w-[18px]", isActive && "text-accent-ink")} />
+                    <span className="relative">{item.title}</span>
+                  </Link>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+            );
+          })}
+        </SidebarMenu>
+      </div>
 
-        {/* Generate New Link Button */}
-        <motion.div
-          initial={{ opacity: 0, x: -20 }}
-          animate={{ opacity: 1, x: 0 }}
-          transition={{ delay: items.length * 0.1 }}
-        >
+      <div className="space-y-2">
+        <p className="eyebrow px-3">Tools</p>
+        <SidebarMenu className="gap-1">
           <SidebarMenuItem>
-            <SidebarMenuButton asChild>
-              <Link
-                to="/"
-                className="p-4 flex items-center gap-3 rounded-xl hover:bg-theme-primary/10 transition-all duration-300"
-              >
-                <Link2 className="w-5 h-5" />
-                <span className="font-medium">Generate New</span>
+            <SidebarMenuButton asChild className={rowClass}>
+              <Link to="/">
+                <Link2 className="h-[18px] w-[18px]" />
+                <span>Generate new</span>
               </Link>
             </SidebarMenuButton>
           </SidebarMenuItem>
-        </motion.div>
-
-        {/* Logout Button */}
-        <motion.div
-          initial={{ opacity: 0, x: -20 }}
-          animate={{ opacity: 1, x: 0 }}
-          transition={{ delay: (items.length + 1) * 0.1 }}
-        >
           <SidebarMenuItem>
             <SidebarMenuButton
               onClick={handleLogout}
-              className="p-4 flex items-center gap-3 rounded-xl hover:bg-red-500/10 text-red-500 hover:text-red-500 transition-all duration-300"
+              className={cn(rowClass, "text-destructive hover:bg-destructive/10 hover:text-destructive")}
             >
-              <LogOut className="w-5 h-5" />
-              <span className="font-medium">Logout</span>
+              <LogOut className="h-[18px] w-[18px]" />
+              <span>Log out</span>
             </SidebarMenuButton>
           </SidebarMenuItem>
-        </motion.div>
-      </SidebarMenu>
+        </SidebarMenu>
+      </div>
     </div>
   );
 };

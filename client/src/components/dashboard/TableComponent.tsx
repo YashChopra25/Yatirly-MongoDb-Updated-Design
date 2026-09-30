@@ -1,33 +1,22 @@
-"use client";
-
 import * as React from "react";
 import {
   ColumnDef,
-  ColumnFiltersState,
   SortingState,
-  VisibilityState,
   flexRender,
   getCoreRowModel,
   getFilteredRowModel,
   getPaginationRowModel,
   getSortedRowModel,
   useReactTable,
+  RowData,
 } from "@tanstack/react-table";
-import { MoreHorizontal } from "lucide-react";
+import { ArrowDown, ArrowUp, ChevronLeft, ChevronRight, Copy, Download, Eye, Link2, MoreHorizontal, Plus, QrCode, Search } from "lucide-react";
+import QRCodeStyling from "qr-code-styling";
+import QRPreviewDialog from "./QRPreviewDialog";
+import { buildQrOptions } from "@/config/qr";
 import { Link } from "react-router-dom";
 import axiosInstance from "@/api/axiosInstance";
-import { motion } from "framer-motion";
-import {
-  FaLink,
-  FaQrcode,
-  FaRegCopy,
-  FaArrowUp,
-  FaArrowDown,
-  FaChevronLeft,
-  FaChevronRight,
-} from "react-icons/fa6";
 import ToastFn from "../Toaster";
-import { Button } from "../ui/button";
 import {
   DropdownMenu,
   DropdownMenuTrigger,
@@ -35,7 +24,9 @@ import {
   DropdownMenuLabel,
   DropdownMenuItem,
   DropdownMenuSeparator,
-} from "@radix-ui/react-dropdown-menu";
+} from "@/components/ui/dropdown-menu";
+import PageHeader from "@/components/common/PageHeader";
+import { cn } from "@/lib/utils";
 
 interface HistoryItem {
   id: string;
@@ -48,53 +39,92 @@ interface HistoryItem {
   };
 }
 
+type TypeFilter = "all" | "link" | "qr";
+
+declare module "@tanstack/react-table" {
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  interface TableMeta<TData extends RowData> {
+    onPreviewQr?: (item: HistoryItem) => void;
+  }
+}
+
+const toShortUrl = (code: string) => `${import.meta.env.VITE_FRONTEND_URL}/${code}`;
+
+const copy = async (text: string, what: string) => {
+  await navigator.clipboard.writeText(text);
+  ToastFn("success", "Copied!", `${what} copied to clipboard`);
+};
+
+const SortHeader = ({ label, sorted, onClick }: { label: string; sorted: false | "asc" | "desc"; onClick: () => void }) => (
+  <button onClick={onClick} className="inline-flex items-center gap-1.5 hover:text-foreground">
+    {label}
+    {sorted === "asc" ? <ArrowUp className="h-3 w-3" /> : <ArrowDown className={cn("h-3 w-3", !sorted && "opacity-40")} />}
+  </button>
+);
+
+const downloadQr = (item: HistoryItem) => {
+  try {
+    new QRCodeStyling(buildQrOptions(toShortUrl(item.ShortURL), undefined, 1024)).download({
+      extension: "png",
+      name: `qr-${item.ShortURL}`,
+    });
+  } catch (error) {
+    console.error("Error downloading QR code:", error);
+    ToastFn("error", "Error", "Failed to download QR code");
+  }
+};
+
 const columns: ColumnDef<HistoryItem>[] = [
   {
-    header: "Type",
-    cell: ({ row }) => {
-      const isQR = row.original.isQR;
-      return (
-        <div className="flex items-center justify-center">
-          {isQR ? (
-            <div className="p-2 rounded-lg bg-purple-500/10">
-              <FaQrcode className="w-4 h-4 text-purple-500" />
-            </div>
-          ) : (
-            <div className="p-2 rounded-lg bg-blue-500/10">
-              <FaLink className="w-4 h-4 text-blue-500" />
-            </div>
-          )}
-        </div>
-      );
+    id: "sno",
+    header: "S.No",
+    cell: ({ row, table }) => {
+      const { pageIndex, pageSize } = table.getState().pagination;
+      const indexOnPage = table.getRowModel().rows.findIndex((r) => r.id === row.id);
+      return <span className="num text-sm text-muted-foreground">{pageIndex * pageSize + indexOnPage + 1}</span>;
     },
+  },
+  {
+    id: "type",
+    header: "Type",
+    cell: ({ row, table }) =>
+      row.original.isQR ? (
+        <button
+          type="button"
+          onClick={() => table.options.meta?.onPreviewQr?.(row.original)}
+          title="Preview QR code"
+          aria-label="Preview QR code"
+          className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-violet-400/30 bg-violet-400/10 text-violet-400 transition-colors hover:bg-violet-400/20"
+        >
+          <QrCode className="h-4 w-4" />
+        </button>
+      ) : (
+        <span className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-theme-primary/30 bg-theme-primary/10 text-accent-ink">
+          <Link2 className="h-4 w-4" />
+        </span>
+      ),
   },
   {
     accessorKey: "ShortURL",
     header: "Short URL",
     cell: ({ row }) => {
-      const shortUrl = `${import.meta.env.VITE_FRONTEND_URL}/${row.getValue("ShortURL")}`;
-      const handleCopy = async () => {
-        await navigator.clipboard.writeText(shortUrl);
-        ToastFn("success", "Copied!", "URL copied to clipboard");
-        setTimeout(() => {
-          // Remove copiedId state as it's no longer needed
-        }, 2000);
-      };
-
+      const shortUrl = toShortUrl(row.getValue("ShortURL"));
       return (
-        <div className="flex items-center gap-2">
-          <Link
-            to={shortUrl}
+        <div className="flex items-center gap-1.5">
+          <a
+            href={shortUrl}
             target="_blank"
-            className="text-sm font-medium hover:text-theme-primary transition-colors"
+            rel="noopener noreferrer"
+            className="font-mono text-[13px] font-medium hover:text-accent-ink"
           >
-            {shortUrl}
-          </Link>
+            {shortUrl.replace(/^https?:\/\//, "")}
+          </a>
           <button
-            onClick={handleCopy}
-            className="p-1.5 rounded-md hover:bg-theme-primary/10 transition-colors"
+            onClick={() => copy(shortUrl, "Short URL")}
+            className="rounded-md p-1.5 text-muted-foreground hover:bg-accent hover:text-foreground"
+            aria-label="Copy short URL"
           >
-            <FaRegCopy className="w-3.5 h-3.5 text-theme-primary/60" />
+            <Copy className="h-3.5 w-3.5" />
           </button>
         </div>
       );
@@ -106,105 +136,68 @@ const columns: ColumnDef<HistoryItem>[] = [
     cell: ({ row }) => {
       const url = row.getValue("longURL") as string;
       return (
-        <div className="max-w-[300px] truncate">
-          <Link
-            to={url}
-            target="_blank"
-            className="text-sm font-medium hover:text-theme-primary transition-colors"
-            title={url}
-          >
-            {url}
-          </Link>
-        </div>
+        <a
+          href={url}
+          target="_blank"
+          rel="noopener noreferrer"
+          title={url}
+          className="block max-w-[280px] truncate text-sm text-muted-foreground hover:text-foreground"
+        >
+          {url}
+        </a>
       );
     },
   },
   {
     accessorKey: "createdAt",
-    header: ({ column }) => {
-      return (
-        <Button
-          variant="ghost"
-          onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
-          className="flex items-center gap-2"
-        >
-          Created
-          {column.getIsSorted() === "asc" ? (
-            <FaArrowUp className="w-3 h-3" />
-          ) : (
-            <FaArrowDown className="w-3 h-3" />
-          )}
-        </Button>
-      );
-    },
-    cell: ({ row }) => {
-      const date = new Date(row.getValue("createdAt"));
-      return (
-        <div className="text-sm text-theme-primary/60">
-          {date.toLocaleDateString("en-US", {
-            year: "numeric",
-            month: "short",
-            day: "numeric",
-          })}
-        </div>
-      );
-    },
+    header: ({ column }) => (
+      <SortHeader label="Created" sorted={column.getIsSorted()} onClick={() => column.toggleSorting(column.getIsSorted() === "asc")} />
+    ),
+    cell: ({ row }) => (
+      <span className="font-mono text-xs text-muted-foreground">
+        {new Date(row.getValue("createdAt")).toLocaleDateString("en-US", {
+          year: "numeric",
+          month: "short",
+          day: "numeric",
+        })}
+      </span>
+    ),
   },
   {
-    accessorKey: "_count",
-    header: ({ column }) => {
-      return (
-        <Button
-          variant="ghost"
-          onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
-          className="flex items-center gap-2"
-        >
-          Clicks
-          {column.getIsSorted() === "asc" ? (
-            <FaArrowUp className="w-3 h-3" />
-          ) : (
-            <FaArrowDown className="w-3 h-3" />
-          )}
-        </Button>
-      );
-    },
-    cell: ({ row }) => {
-      const counts: { visits: number } = row.getValue("_count");
-      return (
-        <div className="text-center font-medium">{counts?.visits || 0}</div>
-      );
-    },
+    id: "clicks",
+    accessorFn: (row) => row._count?.visits ?? 0,
+    header: ({ column }) => (
+      <SortHeader label="Clicks" sorted={column.getIsSorted()} onClick={() => column.toggleSorting(column.getIsSorted() === "asc")} />
+    ),
+    cell: ({ getValue }) => <span className="num text-sm font-semibold">{(getValue() as number).toLocaleString()}</span>,
   },
   {
     id: "actions",
-    // enableHiding: false,
-    cell: ({ row }) => {
-      const ResponseType = row.original;
-      const longURL = ResponseType?.longURL;
-      const ShortURL = `${import.meta.env.VITE_FRONTEND_URL}/${
-        ResponseType?.ShortURL
-      }`;
-
+    cell: ({ row, table }) => {
+      const { longURL, ShortURL, isQR } = row.original;
       return (
         <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="ghost" className="h-8 w-8 p-0 ">
-              <span className="sr-only"> Open menu </span>
-              <MoreHorizontal />
-            </Button>
+          <DropdownMenuTrigger className="rounded-lg p-2 text-muted-foreground hover:bg-accent hover:text-foreground" aria-label="Open menu">
+            <MoreHorizontal className="h-4 w-4" />
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="">
-            <DropdownMenuLabel>Actions </DropdownMenuLabel>
-            <DropdownMenuItem
-              onClick={() => navigator.clipboard.writeText(longURL)}
-            >
-              Copy LongURl
+          <DropdownMenuContent align="end" className="w-52">
+            <DropdownMenuLabel className="eyebrow px-2">Actions</DropdownMenuLabel>
+            {isQR && (
+              <>
+                <DropdownMenuItem onClick={() => table.options.meta?.onPreviewQr?.(row.original)}>
+                  <Eye /> Preview QR code
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => downloadQr(row.original)}>
+                  <Download /> Export QR (PNG)
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+              </>
+            )}
+            <DropdownMenuItem onClick={() => copy(longURL, "Original URL")}>
+              <Copy /> Copy original URL
             </DropdownMenuItem>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem
-              onClick={() => navigator.clipboard.writeText(ShortURL)}
-            >
-              Copy Short Url
+            <DropdownMenuItem onClick={() => copy(toShortUrl(ShortURL), "Short URL")}>
+              <Link2 /> Copy short URL
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
@@ -215,11 +208,11 @@ const columns: ColumnDef<HistoryItem>[] = [
 
 const TableComponent = () => {
   const [sorting, setSorting] = React.useState<SortingState>([]);
-  const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>(
-    []
-  );
-  const [data, setData] = React.useState([]);
+  const [globalFilter, setGlobalFilter] = React.useState("");
+  const [typeFilter, setTypeFilter] = React.useState<TypeFilter>("all");
+  const [data, setData] = React.useState<HistoryItem[]>([]);
   const [isLoading, setIsLoading] = React.useState(false);
+  const [previewItem, setPreviewItem] = React.useState<HistoryItem | null>(null);
 
   React.useEffect(() => {
     const fetchUserUrls = async () => {
@@ -228,137 +221,185 @@ const TableComponent = () => {
         const { data } = await axiosInstance("api/v1/auth/user/fetch-urls");
         if (data.success) setData(data.data);
       } catch (error) {
-        console.log(
-          "error in fetchin the data of the user-created urls",
-          error
-        );
+        console.log("error in fetchin the data of the user-created urls", error);
       } finally {
         setIsLoading(false);
       }
     };
     fetchUserUrls();
   }, []);
-  const [columnVisibility, setColumnVisibility] =
-    React.useState<VisibilityState>({});
-  const [rowSelection, setRowSelection] = React.useState({});
+
+  const counts = React.useMemo(
+    () => ({
+      all: data.length,
+      link: data.filter((d) => !d.isQR).length,
+      qr: data.filter((d) => d.isQR).length,
+    }),
+    [data]
+  );
+
+  const filtered = React.useMemo(
+    () => (typeFilter === "all" ? data : data.filter((d) => (typeFilter === "qr" ? d.isQR : !d.isQR))),
+    [data, typeFilter]
+  );
 
   const table = useReactTable({
-    data,
+    data: filtered,
     columns,
     onSortingChange: setSorting,
-    onColumnFiltersChange: setColumnFilters,
+    onGlobalFilterChange: setGlobalFilter,
+    globalFilterFn: (row, _columnId, value: string) => {
+      const q = value.toLowerCase();
+      return row.original.longURL.toLowerCase().includes(q) || row.original.ShortURL.toLowerCase().includes(q);
+    },
     getCoreRowModel: getCoreRowModel(),
     getPaginationRowModel: getPaginationRowModel(),
     getSortedRowModel: getSortedRowModel(),
     getFilteredRowModel: getFilteredRowModel(),
-    onColumnVisibilityChange: setColumnVisibility,
-    onRowSelectionChange: setRowSelection,
-    state: {
-      sorting,
-      columnFilters,
-      columnVisibility,
-      rowSelection,
-    },
+    state: { sorting, globalFilter },
+    meta: { onPreviewQr: setPreviewItem },
   });
-  if (isLoading) {
-    return <div className="w-full">Loading.........</div>;
-  }
+
+  const pills: { id: TypeFilter; label: string }[] = [
+    { id: "all", label: "All" },
+    { id: "link", label: "Links" },
+    { id: "qr", label: "QR codes" },
+  ];
+
+  const rows = table.getRowModel().rows;
+
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      className="space-y-6"
-    >
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-2xl font-bold theme-text-gradient">
-            Link History
-          </h2>
-          <p className="text-theme-primary/60 mt-1">
-            View and manage all your shortened URLs and QR codes
-          </p>
+    <div className="space-y-6">
+      <PageHeader
+        eyebrow="History"
+        title="Link history"
+        description="Every short link and QR code you've created, with live click counts."
+        actions={
+          <Link to="/" className="btn-primary">
+            <Plus className="h-4 w-4" /> Create new
+          </Link>
+        }
+      />
+
+      {/* Filters */}
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="flex flex-wrap gap-2">
+          {pills.map((pill) => {
+            const active = typeFilter === pill.id;
+            return (
+              <button
+                key={pill.id}
+                onClick={() => {
+                  setTypeFilter(pill.id);
+                  table.setPageIndex(0);
+                }}
+                className={cn(
+                  "inline-flex items-center gap-2 rounded-full border px-3.5 py-1.5 text-sm font-medium transition-colors",
+                  active
+                    ? "border-foreground bg-foreground text-background"
+                    : "border-border text-muted-foreground hover:text-foreground"
+                )}
+              >
+                {pill.label}
+                <span className={cn("font-mono text-[11px]", active ? "opacity-60" : "opacity-70")}>{counts[pill.id]}</span>
+              </button>
+            );
+          })}
         </div>
-        <Link
-          to="/"
-          className="px-4 py-2 rounded-xl bg-theme-primary text-white hover:bg-theme-primary/90 transition-colors"
-        >
-          Create New
-        </Link>
+        <label className="relative w-full sm:w-72">
+          <span className="sr-only">Search links</span>
+          <Search className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+          <input
+            value={globalFilter}
+            onChange={(e) => setGlobalFilter(e.target.value)}
+            placeholder="Search short or original URL"
+            className="field h-10 pl-10"
+          />
+        </label>
       </div>
 
       {/* Table */}
-      <div className="bg-card/50 backdrop-blur-sm rounded-2xl border border-border/50 overflow-hidden">
+      <div className="panel overflow-hidden">
         <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead className="border-b border-border/50">
+          <table className="w-full min-w-[760px]">
+            <thead className="border-b border-border">
               {table.getHeaderGroups().map((headerGroup) => (
                 <tr key={headerGroup.id}>
                   {headerGroup.headers.map((header) => (
                     <th
                       key={header.id}
-                      className="text-left p-4 text-sm font-medium text-theme-primary/60"
+                      className="px-4 py-3 text-left font-mono text-[11px] font-medium uppercase tracking-[0.14em] text-muted-foreground"
                     >
-                      {header.isPlaceholder
-                        ? null
-                        : flexRender(
-                            header.column.columnDef.header,
-                            header.getContext()
-                          )}
+                      {header.isPlaceholder ? null : flexRender(header.column.columnDef.header, header.getContext())}
                     </th>
                   ))}
                 </tr>
               ))}
             </thead>
             <tbody>
-              {table.getRowModel().rows.map((row) => (
-                <tr
-                  key={row.id}
-                  className="border-b border-border/50 hover:bg-theme-primary/5 transition-colors"
-                >
-                  {row.getVisibleCells().map((cell) => (
-                    <td key={cell.id} className="p-4">
-                      {flexRender(
-                        cell.column.columnDef.cell,
-                        cell.getContext()
-                      )}
+              {isLoading ? (
+                Array.from({ length: 5 }).map((_, i) => (
+                  <tr key={i} className="border-b border-border/60 last:border-0">
+                    <td colSpan={columns.length} className="px-4 py-3">
+                      <div className="h-9 animate-pulse rounded-lg bg-secondary" />
                     </td>
-                  ))}
+                  </tr>
+                ))
+              ) : rows.length === 0 ? (
+                <tr>
+                  <td colSpan={columns.length} className="px-4 py-16 text-center">
+                    <p className="font-semibold">Nothing here yet</p>
+                    <p className="mt-1 text-sm text-muted-foreground">
+                      {data.length === 0 ? "Create your first short link to see it on the board." : "No links match your filters."}
+                    </p>
+                  </td>
                 </tr>
-              ))}
+              ) : (
+                rows.map((row) => (
+                  <tr key={row.id} className="border-b border-border/60 transition-colors last:border-0 hover:bg-accent/50">
+                    {row.getVisibleCells().map((cell) => (
+                      <td key={cell.id} className="px-4 py-3">
+                        {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                      </td>
+                    ))}
+                  </tr>
+                ))
+              )}
             </tbody>
           </table>
         </div>
 
-        {/* Pagination */}
-        <div className="p-4 border-t border-border/50 flex items-center justify-between">
+        <div className="flex items-center justify-between border-t border-border px-4 py-3">
+          <p className="font-mono text-xs text-muted-foreground">
+            Page {table.getState().pagination.pageIndex + 1} of {Math.max(table.getPageCount(), 1)}
+          </p>
           <div className="flex items-center gap-2">
-            <Button
-              variant="outline"
-              size="sm"
+            <button
               onClick={() => table.previousPage()}
               disabled={!table.getCanPreviousPage()}
-              className="w-8 h-8 p-0"
+              className="btn-ghost h-8 w-8 px-0"
+              aria-label="Previous page"
             >
-              <FaChevronLeft className="w-4 h-4" />
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
+              <ChevronLeft className="h-4 w-4" />
+            </button>
+            <button
               onClick={() => table.nextPage()}
               disabled={!table.getCanNextPage()}
-              className="w-8 h-8 p-0"
+              className="btn-ghost h-8 w-8 px-0"
+              aria-label="Next page"
             >
-              <FaChevronRight className="w-4 h-4" />
-            </Button>
-          </div>
-          <div className="text-sm text-theme-primary/60">
-            Page {table.getState().pagination.pageIndex + 1} of{" "}
-            {table.getPageCount()}
+              <ChevronRight className="h-4 w-4" />
+            </button>
           </div>
         </div>
       </div>
-    </motion.div>
+
+      <QRPreviewDialog
+        url={previewItem ? toShortUrl(previewItem.ShortURL) : null}
+        code={previewItem?.ShortURL}
+        onOpenChange={(open) => !open && setPreviewItem(null)}
+      />
+    </div>
   );
 };
 

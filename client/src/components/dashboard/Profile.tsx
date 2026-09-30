@@ -1,8 +1,7 @@
 import { motion } from "framer-motion";
 import { useEffect, useState } from "react";
-import { FaUser, FaEnvelope } from "react-icons/fa6";
-import { Button } from "../ui/button";
-import { Input } from "../ui/input";
+import { Check, Mail, Pencil, User as UserIcon } from "lucide-react";
+import PageHeader from "@/components/common/PageHeader";
 import ToastFn from "../Toaster";
 import { useAppSelector } from "@/store/auth.store";
 import axiosInstance from "@/api/axiosInstance";
@@ -42,7 +41,7 @@ const Profile = () => {
       });
       setIsEditing(false);
       // ToastFn("success", "Success", "Profile updated successfully");
-    } catch (error) {
+    } catch {
       ToastFn("error", "Error", "Failed to update profile");
     }
   };
@@ -50,118 +49,110 @@ const Profile = () => {
     const { name, value } = e.target;
     setProfile({ ...profile, [name]: value });
   };
+  const initials = `${profile.first_name[0] ?? ""}${profile.last_name[0] ?? ""}`.toUpperCase() || "Y";
+  const fields = [
+    { name: "first_name", label: "First name", icon: UserIcon, value: profile.first_name, placeholder: "Enter your first name" },
+    { name: "last_name", label: "Last name", icon: UserIcon, value: profile.last_name, placeholder: "Enter your last name" },
+  ] as const;
+
   return (
-    <div className="max-w-2xl mx-auto space-y-8">
-      {/* Profile Header */}
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="bg-card/50 backdrop-blur-sm rounded-2xl border border-border/50 p-6"
-      >
-        <div className="flex items-center justify-between mb-6">
-          <h1 className="text-2xl font-bold theme-text-gradient">
-            Profile Settings
-          </h1>
-          <Button
-            onClick={() => setIsEditing(!isEditing)}
-            variant={isEditing ? "default" : "outline"}
-            className="px-6"
-          >
-            {isEditing ? "Save Changes" : "Edit Profile"}
-          </Button>
-        </div>
+    <div className="space-y-8">
+      <PageHeader
+        eyebrow="Account"
+        title="Profile"
+        description="Your details personalise the dashboard and are used for account emails."
+        actions={
+          !isEditing && (
+            <button onClick={() => setIsEditing(true)} className="btn-ghost">
+              <Pencil className="h-4 w-4" /> Edit profile
+            </button>
+          )
+        }
+      />
 
-        <form onSubmit={handleSubmit} className="space-y-6">
-          {/* Name Input */}
-          <div className="space-y-2">
-            <label className="text-sm font-medium text-theme-primary/60">
-              First Name
-            </label>
-            <div className="relative">
-              <FaUser className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-theme-primary/40" />
-              <Input
-                disabled={!isEditing}
-                name="first_name"
-                value={profile.first_name}
-                onChange={ChangeHandler}
-                className="pl-10 capitalize"
-                placeholder="Enter your First name"
-              />
-            </div>
+      <div className="grid gap-4 lg:grid-cols-[300px_1fr]">
+        {/* Identity card */}
+        <motion.div
+          initial={{ opacity: 0, y: 12 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="panel relative overflow-hidden p-6"
+        >
+          <div
+            aria-hidden="true"
+            className="absolute inset-x-0 top-0 h-24"
+            style={{ background: "radial-gradient(ellipse at 50% 0%, rgb(var(--tp) / 0.25), transparent 70%)" }}
+          />
+          <div className="relative flex flex-col items-center text-center">
+            <span className="flex h-20 w-20 items-center justify-center rounded-2xl bg-theme-primary font-mono text-2xl font-semibold text-theme-primary-foreground shadow-[0_0_40px_-6px_rgb(var(--tp))]">
+              {initials}
+            </span>
+            <p className="mt-4 text-xl font-semibold capitalize">
+              {profile.first_name} {profile.last_name}
+            </p>
+            <p className="mt-1 font-mono text-xs text-muted-foreground">{profile.email}</p>
+            <span className="chip mt-5">
+              <span className="dot" /> Active
+            </span>
           </div>
-          <div className="space-y-2">
-            <label className="text-sm font-medium text-theme-primary/60">
-              Last Name
-            </label>
-            <div className="relative">
-              <FaUser className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-theme-primary/40" />
-              <Input
-                disabled={!isEditing}
-                name="last_name"
-                value={profile.last_name}
-                onChange={ChangeHandler}
-                className="pl-10 capitalize"
-                placeholder="Enter your Last name"
-              />
-            </div>
-          </div>
+        </motion.div>
 
-          {/* Email Input */}
-          <div className="space-y-2">
-            <label className="text-sm font-medium text-theme-primary/60">
-              Email Address
-            </label>
-            <div className="relative">
-              <FaEnvelope className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-theme-primary/40" />
-              <Input
-                type="email"
-                disabled={true}
-                value={profile.email}
-                onChange={(e) =>
-                  setProfile({ ...profile, email: e.target.value })
-                }
-                className="pl-10"
-                placeholder="Enter your email"
-              />
-            </div>
+        {/* Form */}
+        <motion.form
+          initial={{ opacity: 0, y: 12 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.05 }}
+          onSubmit={handleSubmit}
+          className="panel space-y-5 p-6"
+        >
+          <div className="grid gap-5 sm:grid-cols-2">
+            {fields.map((field) => (
+              <div key={field.name} className="space-y-2">
+                <label htmlFor={field.name} className="text-sm font-medium">
+                  {field.label}
+                </label>
+                <div className="relative">
+                  <field.icon className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                  <input
+                    id={field.name}
+                    name={field.name}
+                    disabled={!isEditing}
+                    value={field.value}
+                    onChange={ChangeHandler}
+                    placeholder={field.placeholder}
+                    className="field pl-11 capitalize"
+                  />
+                </div>
+              </div>
+            ))}
           </div>
 
-          {/* Submit Button - Only show when editing */}
+          <div className="space-y-2">
+            <label htmlFor="email" className="text-sm font-medium">
+              Email address
+            </label>
+            <div className="relative">
+              <Mail className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+              <input id="email" type="email" disabled value={profile.email} readOnly className="field pl-11 font-mono text-[13px]" />
+            </div>
+            <p className="text-xs text-muted-foreground">Email can't be changed.</p>
+          </div>
+
           {isEditing && (
             <motion.div
-              initial={{ opacity: 0, y: 10 }}
+              initial={{ opacity: 0, y: 8 }}
               animate={{ opacity: 1, y: 0 }}
-              className="flex justify-end gap-3"
+              className="flex justify-end gap-2 border-t border-border pt-5"
             >
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => {
-                  setIsEditing(false);
-                  // Reset form to original values if needed
-                }}
-              >
+              <button type="button" className="btn-ghost" onClick={() => setIsEditing(false)}>
                 Cancel
-              </Button>
-              <Button type="submit">Save Changes</Button>
+              </button>
+              <button type="submit" className="btn-primary">
+                <Check className="h-4 w-4" /> Save changes
+              </button>
             </motion.div>
           )}
-        </form>
-      </motion.div>
-
-      {/* Help Text */}
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.1 }}
-        className="bg-blue-500/5 backdrop-blur-sm rounded-2xl border border-blue-500/20 p-6"
-      >
-        <h2 className="text-lg font-semibold text-blue-500 mb-2">Note</h2>
-        <p className="text-sm text-blue-500/60">
-          Your profile information is used to personalize your experience and
-          for account-related communications.
-        </p>
-      </motion.div>
+        </motion.form>
+      </div>
     </div>
   );
 };

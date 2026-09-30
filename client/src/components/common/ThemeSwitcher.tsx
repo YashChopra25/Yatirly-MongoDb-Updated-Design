@@ -1,83 +1,65 @@
-import { motion } from 'framer-motion';
-import { useTheme } from '@/context/ThemeContext';
-import { Button } from '@/components/ui/button';
+import { useTheme } from "@/context/ThemeContext";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuLabel,
   DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
-import { Sun, Moon, Palette } from 'lucide-react';
-import { ColorScheme, themes } from '@/config/themes';
+} from "@/components/ui/dropdown-menu";
+import { Sun, Moon, Check } from "lucide-react";
+import { ColorScheme, colorSchemes } from "@/config/themes";
+import { cn } from "@/lib/utils";
 
-const colorSchemeNames: Record<ColorScheme, string> = {
-  purple: 'Purple Dream',
-  blue: 'Ocean Blue',
-  green: 'Forest Green',
-  rose: 'Rose Garden',
-  orange: 'Sunset Orange',
-};
+const iconButton =
+  "inline-flex h-10 w-10 items-center justify-center rounded-lg border border-border bg-card/60 text-muted-foreground transition-colors hover:border-theme-primary/40 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-theme-primary/50";
 
-const ThemeSwitcher = () => {
-  const { theme, colorScheme, toggleTheme, setColorScheme } = useTheme();
+const ThemeSwitcher = ({ className }: { className?: string }) => {
+  const { theme, colorScheme, toggleTheme, setColorScheme, colors } = useTheme();
 
   return (
-    <div className="flex items-center gap-2">
+    <div className={cn("flex items-center gap-2", className)}>
       <DropdownMenu>
-        <DropdownMenuTrigger asChild>
-          <Button
-            variant="outline"
-            size="icon"
-            className="h-10 w-10 rounded-xl border-[#44485e]/30 hover:bg-[#635bc9]/10"
-          >
-            <Palette className="h-5 w-5 text-[#cfcde4]" />
-          </Button>
+        <DropdownMenuTrigger className={iconButton} aria-label="Change accent color">
+          <span
+            className="h-4 w-4 rounded-full ring-2 ring-background"
+            style={{
+              background: `linear-gradient(135deg, ${colors.primary}, ${colors.accent})`,
+              boxShadow: `0 0 12px ${colors.primary}`,
+            }}
+          />
         </DropdownMenuTrigger>
-        <DropdownMenuContent align="end" className="w-56 bg-card border-[#44485e]/30">
-          {(Object.keys(colorSchemeNames) as ColorScheme[]).map((scheme) => {
-            const currentThemeColors = themes[theme][scheme];
+        <DropdownMenuContent align="end" className="w-56">
+          <DropdownMenuLabel className="eyebrow px-2 py-1.5">Accent</DropdownMenuLabel>
+          {(Object.keys(colorSchemes) as ColorScheme[]).map((scheme) => {
+            const meta = colorSchemes[scheme];
             return (
               <DropdownMenuItem
                 key={scheme}
                 onClick={() => setColorScheme(scheme)}
-                className={`flex items-center gap-2 cursor-pointer ${
-                  colorScheme === scheme ? 'bg-[#635bc9]/10' : ''
-                }`}
+                className="flex cursor-pointer items-center gap-3 py-2"
               >
-                <div
-                  className="w-16 h-4 rounded-full"
-                  style={{
-                    background: `linear-gradient(to right, ${currentThemeColors.primary.from}, ${currentThemeColors.primary.to})`,
-                  }}
+                <span
+                  className="h-4 w-4 rounded-full"
+                  style={{ background: `linear-gradient(135deg, ${meta.primary}, ${meta.accent})` }}
                 />
-                <span className="text-sm font-medium">{colorSchemeNames[scheme]}</span>
+                <span className="flex-1 text-sm font-medium">{meta.name}</span>
+                {colorScheme === scheme && <Check className="h-4 w-4 text-accent-ink" />}
               </DropdownMenuItem>
             );
           })}
         </DropdownMenuContent>
       </DropdownMenu>
 
-      <Button
-        variant="outline"
-        size="icon"
+      <button
+        type="button"
         onClick={toggleTheme}
-        className="h-10 w-10 rounded-xl border-[#44485e]/30 hover:bg-[#635bc9]/10"
+        className={iconButton}
+        aria-label={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
       >
-        <motion.div
-          initial={{ scale: 0.5, opacity: 0 }}
-          animate={{ scale: 1, opacity: 1 }}
-          transition={{ duration: 0.2 }}
-          key={theme}
-        >
-          {theme === 'dark' ? (
-            <Sun className="h-5 w-5 text-[#cfcde4]" />
-          ) : (
-            <Moon className="h-5 w-5 text-[#cfcde4]" />
-          )}
-        </motion.div>
-      </Button>
+        {theme === "dark" ? <Sun className="h-[18px] w-[18px]" /> : <Moon className="h-[18px] w-[18px]" />}
+      </button>
     </div>
   );
 };
 
-export default ThemeSwitcher; 
+export default ThemeSwitcher;

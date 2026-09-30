@@ -1,190 +1,112 @@
 import React, { useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import { Link2, QrCode } from "lucide-react";
+import { useSearchParams, useNavigate } from "react-router-dom";
 import LinkGenerator from "./LinkGenerator";
 import QRcodeGenerator from "./QRcodeGenerator";
-import { FaLink, FaArrowRight } from "react-icons/fa6";
-import { BsQrCodeScan } from "react-icons/bs";
-import { useTheme } from "@/context/ThemeContext";
-import { useSearchParams, useNavigate } from "react-router-dom";
+import { cn } from "@/lib/utils";
 
-const FeatureCard = ({ 
-  icon: Icon, 
-  title, 
-  description,
-  isActive, 
-  onClick 
-}: { 
-  icon: React.ElementType; 
-  title: string;
-  description: string;
-  isActive: boolean; 
-  onClick: () => void;
-}) => {
-  const { theme } = useTheme();
-
-  return (
-    <motion.div
-      whileHover={{ scale: 1.02, y: -5 }}
-      whileTap={{ scale: 0.98 }}
-      onClick={onClick}
-      className={`relative overflow-hidden cursor-pointer rounded-2xl ${
-        isActive 
-          ? "bg-theme-primary shadow-lg shadow-theme-primary/25" 
-          : "bg-card hover:bg-theme-primary/10 border border-border/30"
-      } transition-all duration-500 group`}
-    >
-      {/* Glass Effect Overlay */}
-      <div className={`absolute inset-0 backdrop-blur-[2px] ${
-        isActive ? "bg-white/10" : "bg-background/50"
-      }`} />
-      
-      {/* Content */}
-      <div className="relative p-6 h-full">
-        <div className="flex flex-col h-full">
-          <div className={`p-3 rounded-xl w-fit ${
-            isActive 
-              ? "bg-white/20" 
-              : "bg-theme-primary/10"
-          }`}>
-            <Icon className={`w-6 h-6 ${
-              isActive 
-                ? "text-white" 
-                : "text-theme-primary"
-            }`} />
-          </div>
-          
-          <h3 className={`mt-4 text-xl font-semibold ${
-            isActive 
-              ? "text-white" 
-              : "text-foreground"
-          }`}>
-            {title}
-          </h3>
-          
-          <p className={`mt-2 text-sm ${
-            isActive 
-              ? "text-white/90" 
-              : theme === 'dark' ? "text-foreground/60" : "text-foreground/80"
-          }`}>
-            {description}
-          </p>
-          
-          <div className={`mt-4 flex items-center gap-2 ${
-            isActive 
-              ? "text-white" 
-              : "text-theme-primary"
-          }`}>
-            <span className="text-sm font-medium">
-              {isActive ? "Currently Selected" : "Click to Select"}
-            </span>
-            <FaArrowRight className={`w-4 h-4 transition-transform duration-300 ${
-              isActive ? "translate-x-1" : "group-hover:translate-x-1"
-            }`} />
-          </div>
-        </div>
-      </div>
-
-      {/* Animated Border */}
-      {isActive && (
-        <motion.div
-          layoutId="activeFeature"
-          className="absolute inset-0 border-2 border-theme-primary rounded-2xl"
-          initial={false}
-          transition={{ type: "spring", stiffness: 500, damping: 30 }}
-        />
-      )}
-    </motion.div>
-  );
-};
-
-const ContentArea = ({ activeTab }: { activeTab: string }) => (
-  <motion.div
-    initial={{ opacity: 0, y: 20 }}
-    animate={{ opacity: 1, y: 0 }}
-    exit={{ opacity: 0, y: -20 }}
-    transition={{ duration: 0.3 }}
-    className="relative bg-card/50 rounded-2xl p-8 border border-border/30 shadow-lg dark:bg-transparent"
-  >
-    {/* Glass Effect */}
-    <div className="absolute inset-0 bg-background/50 dark:bg-background/5 backdrop-blur-[1px] rounded-2xl" />
-    
-    {/* Content */}
-    <div className="relative">
-      <AnimatePresence mode="wait">
-        <motion.div
-          key={activeTab}
-          initial={{ opacity: 0, x: 20 }}
-          animate={{ opacity: 1, x: 0 }}
-          exit={{ opacity: 0, x: -20 }}
-          transition={{ duration: 0.2 }}
-        >
-          {activeTab === "link" ? <LinkGenerator /> : <QRcodeGenerator />}
-        </motion.div>
-      </AnimatePresence>
-    </div>
-  </motion.div>
-);
+const features = [
+  {
+    id: "link",
+    title: "URL Shortener",
+    description: "Memorable short links that drive more clicks.",
+    icon: Link2,
+  },
+  {
+    id: "qr_code",
+    title: "QR Studio",
+    description: "Branded QR codes that bridge print and digital.",
+    icon: QrCode,
+  },
+];
 
 const Tabs = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const navigate = useNavigate();
-  
-  // Get initial tab from URL or default to "link"
-  const [activeTab, setActiveTab] = React.useState(() => {
-    const tabFromUrl = searchParams.get("tool");
-    return tabFromUrl === "qr_code" ? "qr_code" : "link";
-  });
 
-  const features = [
-    {
-      id: "link",
-      title: "URL Shortener",
-      description: "Create memorable, branded short links that drive more clicks and increase engagement.",
-      icon: FaLink
-    },
-    {
-      id: "qr_code",
-      title: "QR Code Generator",
-      description: "Generate dynamic QR codes that connect your physical and digital presence seamlessly.",
-      icon: BsQrCodeScan
-    }
-  ];
+  const [activeTab, setActiveTab] = React.useState(() =>
+    searchParams.get("tool") === "qr_code" ? "qr_code" : "link"
+  );
 
-  // Update URL when tab changes
   const handleTabChange = (tabId: string) => {
     setActiveTab(tabId);
     setSearchParams({ tool: tabId });
   };
 
-  // Handle direct URL navigation
   useEffect(() => {
     const tabFromUrl = searchParams.get("tool");
-    if (tabFromUrl && features.some(f => f.id === tabFromUrl)) {
+    if (tabFromUrl && features.some((f) => f.id === tabFromUrl)) {
       setActiveTab(tabFromUrl);
     } else if (tabFromUrl) {
-      // If invalid tab parameter, redirect to default
       navigate("/?tool=link", { replace: true });
     }
   }, [searchParams, navigate]);
 
+  const active = features.find((f) => f.id === activeTab) ?? features[0];
+
   return (
-    <div className="w-full space-y-6">
-      {/* Feature Selection */}
-      <div className="grid md:grid-cols-2 gap-6">
-        {features.map((feature) => (
-          <FeatureCard
-            key={feature.id}
-            icon={feature.icon}
-            title={feature.title}
-            description={feature.description}
-            isActive={activeTab === feature.id}
-            onClick={() => handleTabChange(feature.id)}
-          />
-        ))}
+    <div className="space-y-4">
+      {/* Toolbar */}
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="segmented" role="tablist" aria-label="Choose a tool">
+          {features.map((feature) => {
+            const isActive = feature.id === activeTab;
+            return (
+              <button
+                key={feature.id}
+                role="tab"
+                aria-selected={isActive}
+                onClick={() => handleTabChange(feature.id)}
+                className={cn("segment flex items-center gap-2", isActive && "text-foreground")}
+              >
+                {isActive && (
+                  <motion.span
+                    layoutId="tool-pill"
+                    className="absolute inset-0 rounded-lg border border-border bg-accent"
+                    transition={{ type: "spring", stiffness: 500, damping: 40 }}
+                  />
+                )}
+                <feature.icon className={cn("relative h-4 w-4", isActive && "text-accent-ink")} />
+                <span className="relative">{feature.title}</span>
+              </button>
+            );
+          })}
+        </div>
+        <p className="hidden text-sm text-muted-foreground sm:block">{active.description}</p>
       </div>
 
-      {/* Content Display */}
-      <ContentArea activeTab={activeTab} />
+      {/* Console */}
+      <div className="panel relative overflow-hidden">
+        <div className="flex items-center justify-between border-b border-border px-5 py-3">
+          <div className="flex items-center gap-2">
+            <span className="h-2.5 w-2.5 rounded-full bg-border" />
+            <span className="h-2.5 w-2.5 rounded-full bg-border" />
+            <span className="h-2.5 w-2.5 rounded-full bg-theme-primary shadow-[0_0_10px_rgb(var(--tp))]" />
+          </div>
+          <span className="font-mono text-[11px] uppercase tracking-[0.18em] text-muted-foreground">
+            yatirly://{activeTab === "link" ? "shorten" : "qr-studio"}
+          </span>
+        </div>
+        <div
+          aria-hidden="true"
+          className="pointer-events-none absolute inset-x-0 top-0 h-40 opacity-60"
+          style={{ background: "radial-gradient(ellipse at 50% -20%, rgb(var(--tp) / 0.18), transparent 70%)" }}
+        />
+        <div className="relative p-5 sm:p-8">
+          <AnimatePresence mode="wait">
+            <motion.div
+              key={activeTab}
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -10 }}
+              transition={{ duration: 0.2 }}
+            >
+              {activeTab === "link" ? <LinkGenerator /> : <QRcodeGenerator />}
+            </motion.div>
+          </AnimatePresence>
+        </div>
+      </div>
     </div>
   );
 };

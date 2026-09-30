@@ -1,108 +1,31 @@
 import React, { useEffect, useRef, useState, ChangeEvent } from "react";
-import QRCodeStyling, { 
-  Options, 
-  FileExtension,
-  DrawType,
-  TypeNumber,
-  Mode,
-  ErrorCorrectionLevel,
-  DotType,
-  CornerSquareType,
-  CornerDotType
-} from "qr-code-styling";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { Button } from "../ui/button";
-import { Input } from "../ui/input";
+import QRCodeStyling, { Options, FileExtension } from "qr-code-styling";
 import { isAxiosError } from "axios";
 import axiosInstance, { ApiResponse } from "@/api/axiosInstance";
 import { ApiResponseCreateLink } from "@/Types";
 import ToastFn from "../Toaster";
-import { motion } from "framer-motion";
-import { BsQrCodeScan, BsImage } from "react-icons/bs";
-import { FaDownload, FaPalette } from "react-icons/fa6";
+import { Download, ImagePlus, QrCode, X } from "lucide-react";
+import { buildQrOptions, qrFormats, qrPalette } from "@/config/qr";
+import Spinner from "@/components/common/Spinner";
+import { cn } from "@/lib/utils";
+
+// The QR preview starts out pointing at this app's own URL, taken from the environment.
+const DEFAULT_QR_DATA: string = import.meta.env.VITE_FRONTEND_URL ?? "";
 
 const QRcodeGenerator = () => {
   const qrRef = useRef<QRCodeStyling | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+  const logoInputRef = useRef<HTMLInputElement>(null);
+  const [logoName, setLogoName] = useState<string>("");
   
-  const themeColors = [
-    { 
-      name: "Rose", 
-      gradient: { from: "#f43f5e", to: "#fb7185" },
-      color: "#f43f5e"
-    },
-    { 
-      name: "Blue", 
-      gradient: { from: "#3b82f6", to: "#60a5fa" },
-      color: "#3b82f6"
-    },
-    { 
-      name: "Purple", 
-      gradient: { from: "#8b5cf6", to: "#a78bfa" },
-      color: "#8b5cf6"
-    },
-    { 
-      name: "Emerald", 
-      gradient: { from: "#10b981", to: "#34d399" },
-      color: "#10b981"
-    },
-    { 
-      name: "Amber", 
-      gradient: { from: "#f59e0b", to: "#fbbf24" },
-      color: "#f59e0b"
-    },
-    { 
-      name: "Red", 
-      gradient: { from: "#ef4444", to: "#f87171" },
-      color: "#ef4444"
-    },
-  ];
-
-  const defaultOptions: Options = {
-    width: 300,
-    height: 300,
-    type: 'svg' as DrawType,
-    data: 'https://yatirly.yashchopra.tech/',
-    image: '',
-    margin: 10,
-    qrOptions: {
-      typeNumber: 0 as TypeNumber,
-      mode: 'Byte' as Mode,
-      errorCorrectionLevel: 'H' as ErrorCorrectionLevel
-    },
-    imageOptions: {
-      hideBackgroundDots: true,
-      imageSize: 0.4,
-      margin: 20,
-      crossOrigin: 'anonymous',
-    },
-    dotsOptions: {
-      color: themeColors[0].color,
-      type: 'rounded' as DotType
-    },
-    backgroundOptions: {
-      color: 'transparent',
-    },
-    cornersSquareOptions: {
-      color: themeColors[0].color,
-      type: 'extra-rounded' as CornerSquareType,
-    },
-    cornersDotOptions: {
-      color: themeColors[0].color,
-      type: 'dot' as CornerDotType,
-    }
-  };
+  const themeColors = qrPalette;
+  const defaultOptions: Options = buildQrOptions(DEFAULT_QR_DATA);
 
   const [options, setOptions] = useState<Options>(defaultOptions);
   const [fileExt, setFileExt] = useState<FileExtension>("svg");
-  const [inputValue, setInputValue] = useState<string>('https://yatirly.yashchopra.tech/');
+  const [inputValue, setInputValue] = useState<string>(DEFAULT_QR_DATA);
   const [isLoading, setIsLoading] = useState<boolean>(false);
+  const [selectedColor, setSelectedColor] = useState<string>(themeColors[0].name);
 
   // Initialize QR Code
   useEffect(() => {
@@ -112,7 +35,7 @@ const QRcodeGenerator = () => {
       // Create new instance with non-empty data
       const initialOptions = {
         ...defaultOptions,
-        data: 'https://yatirly.yashchopra.tech/'
+        data: DEFAULT_QR_DATA
       };
       qrRef.current = new QRCodeStyling(initialOptions);
       
@@ -209,6 +132,7 @@ const QRcodeGenerator = () => {
   };
 
   const onColorChange = (value: string) => {
+    setSelectedColor(value);
     const selectedColor = themeColors.find(color => color.name === value)?.color || themeColors[0].color;
     setOptions(prevOptions => ({
       ...prevOptions,
@@ -251,6 +175,7 @@ const QRcodeGenerator = () => {
           ...prevOptions,
           image: result
         }));
+        setLogoName(file.name);
       }
     };
     reader.onerror = () => {
@@ -259,155 +184,145 @@ const QRcodeGenerator = () => {
     reader.readAsDataURL(file);
   };
 
+  const removeLogo = () => {
+    setOptions((prevOptions) => ({ ...prevOptions, image: "" }));
+    setLogoName("");
+    // Clear the input so picking the same file again still fires onChange.
+    if (logoInputRef.current) logoInputRef.current.value = "";
+  };
+
+  const formats = qrFormats;
+
   return (
-    <div className="w-full max-w-3xl mx-auto">
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5 }}
-        className="text-center mb-8"
-      >
-        <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-theme-primary/20 mb-4">
-          <BsQrCodeScan className="w-8 h-8 text-theme-primary" />
+    <div className="grid gap-8 lg:grid-cols-[1fr_380px]">
+      {/* Controls */}
+      <div className="space-y-7">
+        <div className="space-y-2">
+          <h2 className="headline text-3xl sm:text-4xl">Design a QR code.</h2>
+          <p className="text-muted-foreground">Generate a tracked short link and wrap it in your own style.</p>
         </div>
-        <h2 className="text-2xl font-bold theme-text-gradient mb-2">
-          Create Custom QR Codes
-        </h2>
-        <p className="text-theme-primary/60">
-          Generate unique QR codes with your branding and style
-        </p>
-      </motion.div>
 
-      <div className="grid md:grid-cols-2 gap-8">
-        {/* Form Section */}
-        <motion.div
-          initial={{ opacity: 0, x: -20 }}
-          animate={{ opacity: 1, x: 0 }}
-          transition={{ delay: 0.2 }}
-          className="space-y-6"
-        >
-          <form onSubmit={HandleSubmit} className="space-y-4">
-            <div>
-              <label className="text-sm font-medium text-theme-primary/60 mb-2 block">
-                Enter your URL
-              </label>
-              <Input
-                type="text"
-                placeholder="Enter your long URL"
-                value={inputValue}
-                onChange={(event) => setInputValue(event.target.value)}
-                required
-                className="h-12 border-[var(--input-border)] rounded-xl focus:ring-2 focus:ring-[var(--theme-primary)]/30"
-              />
-            </div>
-
-            <Button
-              className="w-full h-12 rounded-xl theme-gradient hover:opacity-90 text-white transition-all duration-300"
-              type="submit"
-              disabled={isLoading}
-            >
+        <form onSubmit={HandleSubmit} className="space-y-3">
+          <label htmlFor="qr-url" className="eyebrow">
+            01 · Destination
+          </label>
+          <div className="flex flex-col gap-3 sm:flex-row">
+            <input
+              id="qr-url"
+              type="text"
+              placeholder="Enter your long URL"
+              value={inputValue}
+              onChange={(event) => setInputValue(event.target.value)}
+              required
+              className="field font-mono text-[13px]"
+            />
+            <button className="btn-primary h-12 px-6" type="submit" disabled={isLoading}>
               {isLoading ? (
-                <div className="flex items-center gap-3">
-                  <div className="w-5 h-5 border-2 border-white/20 border-t-white rounded-full animate-spin" />
-                  <span>Generating...</span>
-                </div>
+                <>
+                  <Spinner /> Generating…
+                </>
               ) : (
-                "Generate QR Code"
+                <>
+                  <QrCode className="h-4 w-4" /> Generate
+                </>
               )}
-            </Button>
-          </form>
-
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            className="space-y-4"
-          >
-            <div className="space-y-2">
-              <label className="text-sm font-medium text-theme-primary/60 flex items-center gap-2">
-                <BsImage className="w-4 h-4" />
-                Add Logo (Optional)
-              </label>
-              <Input
-                type="file"
-                onChange={HandleImageUpload}
-                accept="image/*"
-                className="h-12 file-input border-[var(--input-border)] rounded-xl focus:ring-2 focus:ring-[var(--theme-primary)]/30"
-              />
-            </div>
-
-            <div className="space-y-2">
-              <label className="text-sm font-medium text-theme-primary/60 flex items-center gap-2">
-                <FaPalette className="w-4 h-4" />
-                QR Code Style
-              </label>
-              <div className="flex items-center gap-3">
-                <div className="flex-1 grid grid-cols-2 gap-3">
-                  <Select 
-                    onValueChange={onColorChange}
-                    defaultValue={themeColors[0].name}
-                  >
-                    <SelectTrigger className="h-12 border-[var(--input-border)] rounded-xl focus:ring-2 focus:ring-[var(--theme-primary)]/30">
-                      <div className="flex items-center gap-2">
-                       
-                        <SelectValue placeholder="Choose color" />
-                      </div>
-                    </SelectTrigger>
-                    <SelectContent>
-                      {themeColors.map((color) => (
-                        <SelectItem 
-                          key={color.name} 
-                          value={color.name}
-                          className="flex items-center gap-2"
-                        >
-                          <div 
-                            className="w-16 h-4 rounded-full border border-[var(--input-border)]" 
-                            style={{ 
-                              background: `linear-gradient(to right, ${color.gradient.from}, ${color.gradient.to})`,
-                            }}
-                          />
-                          <span className="ml-2">{color.name}</span>
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-
-                  <Select onValueChange={onExtensionChange} defaultValue={fileExt}>
-                    <SelectTrigger className="h-12 border-[var(--input-border)] rounded-xl focus:ring-2 focus:ring-[var(--theme-primary)]/30">
-                      <SelectValue placeholder="File type" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="svg">SVG</SelectItem>
-                      <SelectItem value="png">PNG</SelectItem>
-                      <SelectItem value="jpeg">JPEG</SelectItem>
-                      <SelectItem value="webp">WEBP</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <Button
-                  onClick={onDownloadClick}
-                  variant="outline"
-                  className="h-12 px-6 rounded-xl border-theme-primary/30 hover:bg-theme-primary/10 text-theme-primary transition-all duration-300"
-                >
-                  <FaDownload className="w-5 h-5" />
-                </Button>
-              </div>
-            </div>
-          </motion.div>
-        </motion.div>
-
-        {/* Preview Section */}
-        <motion.div
-          initial={{ opacity: 0, x: 20 }}
-          animate={{ opacity: 1, x: 0 }}
-          transition={{ delay: 0.3 }}
-          className="relative"
-        >
-          <div className="absolute inset-0 bg-gradient-to-br from-theme-primary/5 to-theme-primary/5 rounded-xl" />
-          <div className="relative p-6 flex items-center justify-center min-h-[400px] rounded-xl border border-border/30 bg-card/30 backdrop-blur-sm">
-            <div ref={containerRef} className="qr-code-container" />
+            </button>
           </div>
-        </motion.div>
+        </form>
+
+        <div className="space-y-3">
+          <p className="eyebrow">02 · Palette</p>
+          <div className="flex flex-wrap gap-2">
+            {themeColors.map((color) => {
+              const selected = selectedColor === color.name;
+              return (
+                <button
+                  key={color.name}
+                  type="button"
+                  onClick={() => onColorChange(color.name)}
+                  aria-pressed={selected}
+                  className={cn(
+                    "flex items-center gap-2 rounded-full border px-3 py-1.5 text-sm transition-all",
+                    selected
+                      ? "border-theme-primary/60 bg-theme-primary/10 text-foreground"
+                      : "border-border text-muted-foreground hover:border-theme-primary/30 hover:text-foreground"
+                  )}
+                >
+                  <span
+                    className="h-3.5 w-3.5 rounded-full ring-1 ring-border"
+                    style={{ background: `linear-gradient(135deg, ${color.gradient.from}, ${color.gradient.to})` }}
+                  />
+                  {color.name}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
+        <div className="space-y-3">
+          <label htmlFor="qr-logo" className="eyebrow">
+            <ImagePlus className="h-3.5 w-3.5" /> 03 · Logo <span className="normal-case tracking-normal">(optional, max 2MB)</span>
+          </label>
+          {options.image ? (
+            <div className="field flex items-center gap-3 py-2">
+              <img src={options.image} alt="" className="h-8 w-8 rounded-md border border-border bg-white object-contain" />
+              <span className="min-w-0 flex-1 truncate text-sm">{logoName || "Logo added"}</span>
+              <button type="button" onClick={removeLogo} className="btn-danger h-8 px-3 text-xs">
+                <X className="h-3.5 w-3.5" /> Remove
+              </button>
+            </div>
+          ) : (
+            <input
+              ref={logoInputRef}
+              id="qr-logo"
+              type="file"
+              onChange={HandleImageUpload}
+              accept="image/*"
+              className="file-input field flex items-center py-2 text-muted-foreground"
+            />
+          )}
+        </div>
+
+        <div className="space-y-3">
+          <p className="eyebrow">04 · Export</p>
+          <div className="flex flex-wrap items-center gap-3">
+            <div className="segmented">
+              {formats.map((ext) => (
+                <button
+                  key={ext}
+                  type="button"
+                  onClick={() => onExtensionChange(ext)}
+                  className={cn("segment font-mono text-xs uppercase", fileExt === ext && "bg-accent text-foreground")}
+                >
+                  {ext}
+                </button>
+              ))}
+            </div>
+            <button type="button" onClick={onDownloadClick} className="btn-ghost h-11">
+              <Download className="h-4 w-4" /> Download
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* Preview */}
+      <div className="relative">
+        <div className="panel-inset relative flex h-full min-h-[380px] flex-col items-center justify-center gap-5 p-6">
+          {/* Corner brackets */}
+          {["left-3 top-3 border-l-2 border-t-2", "right-3 top-3 border-r-2 border-t-2", "bottom-3 left-3 border-b-2 border-l-2", "bottom-3 right-3 border-b-2 border-r-2"].map((pos) => (
+            <span key={pos} className={cn("absolute h-6 w-6 rounded-[4px] border-theme-primary/70", pos)} />
+          ))}
+          <div className="relative overflow-hidden rounded-2xl bg-white p-3 shadow-[0_20px_60px_-20px_rgb(var(--tp)/0.5)]">
+            <div ref={containerRef} className="qr-code-container [&_svg]:h-auto [&_svg]:max-w-full" />
+            <span className="absolute inset-x-0 h-0.5 animate-scan bg-theme-primary shadow-[0_0_14px_rgb(var(--tp))]" />
+          </div>
+          <div className="w-full text-center">
+            <p className="eyebrow justify-center">Encoded</p>
+            <p className="num mt-1 truncate text-sm" title={options.data}>
+              {options.data?.replace(/^https?:\/\//, "")}
+            </p>
+          </div>
+        </div>
       </div>
     </div>
   );

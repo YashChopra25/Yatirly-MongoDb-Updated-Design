@@ -4,7 +4,9 @@ import { isAxiosError } from "axios";
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { motion } from "framer-motion";
-import { FaLink, FaTriangleExclamation } from "react-icons/fa6";
+import { ArrowRight, TriangleAlert } from "lucide-react";
+import Backdrop from "@/components/common/Backdrop";
+import SignalLoader from "@/components/common/SignalLoader";
 
 const Redirection = () => {
   const { shortLink } = useParams();
@@ -43,105 +45,51 @@ const Redirection = () => {
 
   if (error) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center p-4">
+      <div className="relative flex min-h-screen items-center justify-center p-4">
+        <Backdrop streaks={false} />
         <motion.div
-          initial={{ opacity: 0, y: 20 }}
+          initial={{ opacity: 0, y: 16 }}
           animate={{ opacity: 1, y: 0 }}
-          className="text-center max-w-md mx-auto"
+          className="panel w-full max-w-md p-8 text-center"
         >
-          <div className="w-16 h-16 mx-auto mb-6 rounded-2xl bg-red-500/10 flex items-center justify-center">
-            <FaTriangleExclamation className="w-8 h-8 text-red-500" />
-          </div>
-          <h1 className="text-2xl font-bold mb-3">Invalid Link</h1>
-          <p className="text-theme-primary/60 mb-6">
+          <span className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl border border-destructive/30 bg-destructive/10 text-destructive">
+            <TriangleAlert className="h-6 w-6" />
+          </span>
+          <p className="eyebrow mt-6 justify-center">Error · 404</p>
+          <h1 className="headline mt-2 text-3xl">Invalid link</h1>
+          <p className="mt-2 text-muted-foreground">
             The link you're trying to access doesn't exist or has expired.
           </p>
-          <motion.button
-            whileHover={{ scale: 1.02 }}
-            whileTap={{ scale: 0.98 }}
-            onClick={() => navigate("/")}
-            className="px-6 py-2 rounded-xl bg-theme-primary text-white hover:bg-theme-primary/90 transition-colors"
-          >
-            Go Home
-          </motion.button>
+          <p className="num mt-4 rounded-lg border border-border bg-background/60 px-3 py-2 text-sm text-muted-foreground">
+            /{shortLink}
+          </p>
+          <button onClick={() => navigate("/")} className="btn-primary mt-6 w-full">
+            Go home <ArrowRight className="h-4 w-4" />
+          </button>
         </motion.div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-background flex items-center justify-center p-4">
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="text-center"
-      >
-        {/* Logo Animation */}
-        <motion.div
-          animate={{ 
-            scale: [1, 1.2, 1],
-            rotate: [0, 360],
-          }}
-          transition={{ 
-            duration: 2,
-            repeat: Infinity,
-            ease: "easeInOut"
-          }}
-          className="w-20 h-20 mx-auto mb-8"
-        >
-          <div className="w-full h-full rounded-2xl bg-gradient-to-r from-theme-primary via-theme-secondary to-theme-accent relative overflow-hidden">
-            <div className="absolute inset-0 bg-background/10 backdrop-blur-sm"></div>
-            <FaLink className="absolute inset-0 m-auto w-10 h-10 text-white/80" />
-          </div>
-        </motion.div>
-
-        {/* Loading Text */}
-        <motion.h2
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 0.2 }}
-          className="text-2xl font-bold theme-text-gradient mb-4"
-        >
-          Redirecting you...
-        </motion.h2>
-
-        {/* Loading Bar */}
-        <motion.div
-          className="h-1 bg-theme-primary/20 rounded-full max-w-[200px] mx-auto overflow-hidden"
-        >
-          <motion.div
-            initial={{ x: "-100%" }}
-            animate={{ x: "100%" }}
-            transition={{ 
-              repeat: Infinity,
-              duration: 1,
-              ease: "linear"
-            }}
-            className="w-full h-full bg-gradient-to-r from-theme-primary via-theme-secondary to-theme-accent"
-          />
-        </motion.div>
-
-        {/* Loading Message */}
-        <motion.p
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 0.4 }}
-          className="mt-6 text-theme-primary/60"
-        >
-          Please wait while we redirect you to your destination
-        </motion.p>
-
-        {/* Cancel Button */}
-        <motion.button
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 0.6 }}
-          onClick={() => navigate("/")}
-          className="mt-8 text-sm text-theme-primary/40 hover:text-theme-primary transition-colors"
-        >
-          Cancel Redirect
-        </motion.button>
+    <div className="relative flex min-h-screen flex-col items-center justify-center gap-8 p-4 text-center">
+      <Backdrop />
+      <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }}>
+        <SignalLoader />
       </motion.div>
+      <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 }} className="space-y-3">
+        <p className="eyebrow justify-center">
+          <span className="dot" /> Resolving /{shortLink}
+        </p>
+        <h2 className="headline text-4xl">Redirecting you…</h2>
+        <p className="text-muted-foreground">Please wait while we redirect you to your destination.</p>
+      </motion.div>
+      <div className="progress-track w-56">
+        <div className="progress-fill w-1/2 animate-shimmer" />
+      </div>
+      <button onClick={() => navigate("/")} className="text-sm text-muted-foreground transition-colors hover:text-foreground">
+        Cancel redirect
+      </button>
     </div>
   );
 };

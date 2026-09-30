@@ -91,7 +91,7 @@ const Redirection = () => {
           }}
           className="w-20 h-20 mx-auto mb-8"
         >
-          <div className="w-full h-full rounded-2xl bg-gradient-to-r from-theme-primary via-theme-secondary to-theme-accent relative overflow-hidden">
+          <div className="w-full h-full rounded-2xl theme-gradient relative overflow-hidden">
             <div className="absolute inset-0 bg-background/10 backdrop-blur-sm"></div>
           </div>
         </motion.div>
@@ -125,7 +125,7 @@ const Redirection = () => {
               initial={{ width: "100%" }}
               animate={{ width: "0%" }}
               transition={{ duration: 3, ease: "linear" }}
-              className="h-1 bg-gradient-to-r from-theme-primary via-theme-secondary to-theme-accent rounded-full"
+              className="h-1 theme-gradient rounded-full"
             />
           </div>
 

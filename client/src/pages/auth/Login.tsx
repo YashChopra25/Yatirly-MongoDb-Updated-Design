@@ -1,11 +1,11 @@
 import React, { useState } from "react";
 import { isAxiosError } from "axios";
 import axiosInstance, { ApiResponse } from "@/api/axiosInstance";
-import { Link, useNavigate } from "react-router-dom";
-import { motion } from "framer-motion";
-import { useTheme } from "@/context/ThemeContext";
-import { FiMail, FiLock, FiArrowRight } from "react-icons/fi";
-import AuthNavbar from "@/components/auth/AuthNavbar";
+import { Link, useLocation, useNavigate } from "react-router-dom";
+import { ArrowRight, Lock, Mail } from "lucide-react";
+import AuthLayout from "@/components/auth/AuthLayout";
+import AuthField from "@/components/auth/AuthField";
+import Spinner from "@/components/common/Spinner";
 
 const Login: React.FC = () => {
   const [email, setEmail] = useState<string>("");
@@ -13,7 +13,7 @@ const Login: React.FC = () => {
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string>("");
   const navigate = useNavigate();
-  const { colors } = useTheme();
+  const location = useLocation();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -36,7 +36,9 @@ const Login: React.FC = () => {
         return;
       }
 
-      navigate("/dashboard");
+      // Return to the page that sent the user here (e.g. /dashboard?tab=history).
+      const from = location.state?.from;
+      navigate(from?.pathname ? `${from.pathname}${from.search ?? ""}` : "/dashboard?tab=home", { replace: true });
     } catch (error: unknown) {
       let message = "An error occurred during login. Please try again.";
       if (isAxiosError(error)) {
@@ -49,190 +51,55 @@ const Login: React.FC = () => {
   };
 
   return (
-    <>
-      <AuthNavbar />
-      <div className="min-h-screen flex items-center justify-center relative overflow-hidden bg-background pt-16">
-        {/* Decorative background elements */}
-        <div className="absolute inset-0 -z-10 overflow-hidden">
-          {/* Animated gradient circles */}
-          <div 
-            className="absolute top-0 -left-4 w-96 h-96 rounded-full mix-blend-multiply filter blur-3xl opacity-50 animate-blob"
-            style={{ background: `linear-gradient(45deg, ${colors.primary.from}30, ${colors.primary.to}30)` }}
-          />
-          <div 
-            className="absolute -top-4 -right-4 w-96 h-96 rounded-full mix-blend-multiply filter blur-3xl opacity-50 animate-blob animation-delay-2000"
-            style={{ background: `linear-gradient(135deg, ${colors.primary.to}30, ${colors.primary.from}30)` }}
-          />
-          <div 
-            className="absolute -bottom-8 left-20 w-96 h-96 rounded-full mix-blend-multiply filter blur-3xl opacity-50 animate-blob animation-delay-4000"
-            style={{ background: `linear-gradient(225deg, ${colors.primary.from}30, ${colors.primary.to}30)` }}
-          />
-          
-          {/* Grid pattern overlay */}
-          <div 
-            className="absolute inset-0 bg-grid-white/[0.05] bg-[length:20px_20px]"
-            style={{ 
-              maskImage: 'radial-gradient(circle at center, transparent 0%, black 100%)',
-              WebkitMaskImage: 'radial-gradient(circle at center, transparent 0%, black 100%)'
-            }}
-          />
-        </div>
-
-        <motion.div 
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5 }}
-          className="w-full max-w-md relative px-4"
-        >
-          <div 
-            className="backdrop-blur-xl rounded-3xl p-8 shadow-2xl border"
-            style={{ 
-              backgroundColor: `${colors.background.start}70`,
-              borderColor: `${colors.card.border}20`,
-            }}
-          >
-            {/* Logo or Brand Icon */}
-            <div className="w-16 h-16 mx-auto mb-6 rounded-2xl theme-gradient flex items-center justify-center">
-              <motion.div
-                initial={{ scale: 0 }}
-                animate={{ scale: 1 }}
-                transition={{ 
-                  type: "spring",
-                  stiffness: 260,
-                  damping: 20,
-                  delay: 0.1 
-                }}
-                className="text-white text-2xl font-bold"
-              >
-                Y
-              </motion.div>
-            </div>
-
-            <motion.div
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.2 }}
-              className="text-center mb-8"
-            >
-              <h2 className="text-4xl font-bold theme-text-gradient mb-3">Welcome Back!</h2>
-              <p className="text-foreground/60">Sign in to continue your journey</p>
-            </motion.div>
-
-            {error && (
-              <motion.div
-                initial={{ opacity: 0, y: -10 }}
-                animate={{ opacity: 1, y: 0 }}
-                className="bg-red-500/10 border border-red-500/20 rounded-xl p-4 mb-6"
-              >
-                <p className="text-red-500 text-center text-sm">{error}</p>
-              </motion.div>
-            )}
-
-            <form onSubmit={handleSubmit} className="space-y-5">
-              <motion.div 
-                className="relative group"
-                initial={{ opacity: 0, x: -10 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ delay: 0.3 }}
-              >
-                <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                  <FiMail className="h-5 w-5 transition-colors duration-200 text-foreground/40 group-focus-within:text-theme-primary" />
-                </div>
-                <input
-                  id="email"
-                  type="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  className="block w-full pl-12 pr-4 py-3.5 border bg-background/50 rounded-xl transition-all duration-200 placeholder:text-foreground/40 focus:outline-none"
-                  style={{ 
-                    borderColor: `${colors.card.border}30`,
-                    '--theme-primary': colors.primary.from,
-                  } as React.CSSProperties}
-                  placeholder="Enter your email"
-                />
-                <div 
-                  className="absolute inset-0 rounded-xl pointer-events-none transition-all duration-200 opacity-0 group-focus-within:opacity-100"
-                  style={{ 
-                    boxShadow: `0 0 0 2px ${colors.primary.from}30`,
-                  }}
-                />
-              </motion.div>
-
-              <motion.div 
-                className="relative group"
-                initial={{ opacity: 0, x: -10 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ delay: 0.4 }}
-              >
-                <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                  <FiLock className="h-5 w-5 transition-colors duration-200 text-foreground/40 group-focus-within:text-theme-primary" />
-                </div>
-                <input
-                  id="password"
-                  type="password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  className="block w-full pl-12 pr-4 py-3.5 border bg-background/50 rounded-xl transition-all duration-200 placeholder:text-foreground/40 focus:outline-none"
-                  style={{ 
-                    borderColor: `${colors.card.border}30`,
-                    '--theme-primary': colors.primary.from,
-                  } as React.CSSProperties}
-                  autoComplete="off"
-                  placeholder="Enter your password"
-                />
-                <div 
-                  className="absolute inset-0 rounded-xl pointer-events-none transition-all duration-200 opacity-0 group-focus-within:opacity-100"
-                  style={{ 
-                    boxShadow: `0 0 0 2px ${colors.primary.from}30`,
-                  }}
-                />
-              </motion.div>
-
-              <motion.button
-                whileHover={{ scale: 1.01 }}
-                whileTap={{ scale: 0.99 }}
-                type="submit"
-                disabled={loading}
-                className="relative w-full py-3.5 rounded-xl font-medium transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed overflow-hidden group"
-                style={{
-                  background: `linear-gradient(to right, ${colors.primary.from}, ${colors.primary.to})`,
-                  color: colors.primary.text,
-                }}
-              >
-                <div className="relative flex items-center justify-center">
-                  {loading ? (
-                    <>
-                      <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin mr-2" />
-                      <span>Logging In...</span>
-                    </>
-                  ) : (
-                    <>
-                      <span>Log In</span>
-                      <FiArrowRight className="w-5 h-5 ml-2 transition-transform duration-200 group-hover:translate-x-1" />
-                    </>
-                  )}
-                </div>
-              </motion.button>
-            </form>
-
-            <motion.p 
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ delay: 0.5 }}
-              className="mt-8 text-center text-foreground/60"
-            >
-              Don't have an account?{" "}
-              <Link 
-                to="/auth/signup" 
-                className="font-medium hover:underline theme-text-gradient"
-              >
-                Sign up
-              </Link>
-            </motion.p>
-          </div>
-        </motion.div>
-      </div>
-    </>
+    <AuthLayout
+      eyebrow="Sign in"
+      title="Welcome back."
+      subtitle="Log in to your links, QR codes and analytics."
+      error={error}
+      footer={
+        <>
+          Don't have an account?{" "}
+          <Link to="/auth/signup" className="font-semibold text-accent-ink hover:underline">
+            Sign up
+          </Link>
+        </>
+      }
+    >
+      <form onSubmit={handleSubmit} className="space-y-5" noValidate>
+        <AuthField
+          id="email"
+          label="Email"
+          type="email"
+          icon={Mail}
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          placeholder="you@example.com"
+          autoComplete="email"
+        />
+        <AuthField
+          id="password"
+          label="Password"
+          type="password"
+          icon={Lock}
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+          placeholder="Enter your password"
+          autoComplete="current-password"
+        />
+        <button type="submit" disabled={loading} className="btn-primary group h-12 w-full text-[15px]">
+          {loading ? (
+            <>
+              <Spinner /> Logging in…
+            </>
+          ) : (
+            <>
+              Log in
+              <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
+            </>
+          )}
+        </button>
+      </form>
+    </AuthLayout>
   );
 };
 

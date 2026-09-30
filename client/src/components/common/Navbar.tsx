@@ -1,114 +1,75 @@
 import { useAppSelector } from "@/store/auth.store";
-import { Link } from "react-router-dom";
-import { motion } from "framer-motion";
-import { RiDashboardLine } from "react-icons/ri";
-import { FiLogIn, FiUserPlus } from "react-icons/fi";
+import { Link, NavLink, useLocation } from "react-router-dom";
+import { LayoutDashboard, LogIn, Plus } from "lucide-react";
 import ThemeSwitcher from "./ThemeSwitcher";
-import { useTheme } from "@/context/ThemeContext";
+import Logo from "./Logo";
+import { cn } from "@/lib/utils";
 
-const Navbar = () => {
+const links = [
+  { to: "/?tool=link", label: "Shorten", tool: "link" },
+  { to: "/?tool=qr_code", label: "QR Codes", tool: "qr_code" },
+  { to: "/dashboard?tab=history", label: "History", tool: null },
+];
+
+const Navbar = ({ minimal = false }: { minimal?: boolean }) => {
   const user = useAppSelector((state) => state.auth.user);
-  const { colors } = useTheme();
+  const location = useLocation();
+  const activeTool = new URLSearchParams(location.search).get("tool") ?? "link";
 
   return (
-    <motion.nav 
-      initial={{ y: -100 }}
-      animate={{ y: 0 }}
-      transition={{ type: "spring", stiffness: 100, damping: 20 }}
-      className="sticky top-0 z-50 backdrop-blur-md border-b transition-colors duration-300"
-      style={{
-        backgroundColor: `${colors.background.start}80`,
-        borderColor: `${colors.card.border}30`,
-      }}
-    >
-      <div className="container mx-auto px-4">
-        <div className="flex items-center justify-between h-16">
-          {/* Logo */}
-          <motion.div
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.95 }}
-          >
-            <Link to="/" className="flex items-center gap-2">
-              <div className="relative">
-                <div 
-                  className="absolute inset-0 blur-lg rounded-full"
-                  style={{ backgroundColor: `${colors.primary.from}20` }}
-                />
-                <span 
-                  className="relative text-3xl font-bold bg-clip-text text-transparent"
-                  style={{
-                    backgroundImage: `linear-gradient(to right, ${colors.primary.from}, ${colors.primary.to})`,
-                  }}
-                >
-                  Yatirly
-                </span>
-              </div>
-            </Link>
-          </motion.div>
+    <header className="sticky top-0 z-50 border-b border-border/70 bg-background/70 backdrop-blur-xl">
+      <div className="container flex h-16 items-center gap-6">
+        <Logo />
 
-          {/* Navigation Links */}
-          <div className="flex items-center gap-4">
-            <ThemeSwitcher />
-            
-            {user && user.name ? (
-              <motion.div
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-              >
-                <Link 
-                  to="/dashboard" 
-                  className="flex items-center gap-2 px-4 py-2 rounded-lg transition-all duration-300"
-                  style={{
-                    backgroundColor: `${colors.primary.from}10`,
-                    borderColor: `${colors.primary.from}30`,
-                    color: colors.text.primary,
-                  }}
+        {!minimal && (
+          <nav className="hidden items-center gap-1 md:flex">
+            {links.map((link) => {
+              const active = location.pathname === "/" && link.tool === activeTool;
+              return (
+                <NavLink
+                  key={link.label}
+                  to={link.to}
+                  className={cn(
+                    "rounded-lg px-3 py-2 text-sm font-medium transition-colors",
+                    active ? "text-foreground" : "text-muted-foreground hover:text-foreground"
+                  )}
                 >
-                  <RiDashboardLine className="w-5 h-5" />
-                  <span className="font-medium">Dashboard</span>
-                </Link>
-              </motion.div>
+                  {link.label}
+                </NavLink>
+              );
+            })}
+          </nav>
+        )}
+
+        <div className="ml-auto flex items-center gap-2">
+          <span className="chip hidden lg:inline-flex">
+            <span className="dot" />
+            Live
+          </span>
+          <ThemeSwitcher />
+          {!minimal &&
+            (user?.name ? (
+              <Link to="/dashboard" className="btn-primary">
+                <LayoutDashboard className="h-4 w-4" />
+                <span className="max-sm:hidden">Dashboard</span>
+              </Link>
             ) : (
-              <div className="flex items-center gap-3">
-                <motion.div
-                  whileHover={{ scale: 1.05 }}
-                  whileTap={{ scale: 0.95 }}
-                >
-                  <Link 
-                    to="/auth/login" 
-                    className="flex items-center gap-2 px-4 py-2 rounded-lg transition-all duration-300"
-                    style={{
-                      background: `linear-gradient(to right, ${colors.primary.from}, ${colors.primary.to})`,
-                      color: colors.primary.text,
-                    }}
-                  >
-                    <FiLogIn className="w-5 h-5" />
-                    <span className="font-medium">Login</span>
-                  </Link>
-                </motion.div>
-                <motion.div
-                  whileHover={{ scale: 1.05 }}
-                  whileTap={{ scale: 0.95 }}
-                >
-                  <Link 
-                    to="/auth/signup" 
-                    className="flex items-center gap-2 px-4 py-2 rounded-lg transition-all duration-300"
-                    style={{
-                      backgroundColor: `${colors.primary.from}10`,
-                      borderColor: `${colors.primary.from}30`,
-                      color: colors.text.primary,
-                    }}
-                  >
-                    <FiUserPlus className="w-5 h-5" />
-                    <span className="font-medium">Sign Up</span>
-                  </Link>
-                </motion.div>
-              </div>
-            )}
-          </div>
+              <>
+                <Link to="/auth/login" className="btn-ghost max-sm:hidden">
+                  <LogIn className="h-4 w-4" />
+                  Log in
+                </Link>
+                <Link to="/auth/signup" className="btn-primary">
+                  <Plus className="h-4 w-4" />
+                  <span>
+                    Sign up<span className="max-sm:hidden"> free</span>
+                  </span>
+                </Link>
+              </>
+            ))}
         </div>
       </div>
-    </motion.nav>
+    </header>
   );
 };
 

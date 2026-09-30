@@ -2,35 +2,34 @@ import Home from "@/components/dashboard/Home";
 import Profile from "@/components/dashboard/Profile";
 import Setting from "@/components/dashboard/Setting";
 import TableComponent from "@/components/dashboard/TableComponent";
-import { Calendar, HomeIcon, User, Settings} from "lucide-react";
+import { History, LayoutGrid, User, Settings } from "lucide-react";
 
 export const items = [
   {
     url: "/home",
     query: "home",
-    icon: HomeIcon,
+    title: "Overview",
+    icon: LayoutGrid,
     component: <Home />,
   },
   {
     url: "/history",
     query: "history",
-    icon: Calendar,
-    component: (
-      <div className="mt-2">
-      
-        <TableComponent />
-      </div>
-    ),
+    title: "Link history",
+    icon: History,
+    component: <TableComponent />,
   },
   {
     url: "/profile",
     query: "profile",
+    title: "Profile",
     icon: User,
     component: <Profile />,
   },
   {
     url: "/setting",
     query: "settings",
+    title: "Settings",
     icon: Settings,
     component: <Setting />,
   },

@@ -1,81 +1,60 @@
-import React, { createContext, useContext, useEffect, useState } from 'react';
-import { ThemeType, ColorScheme, themes } from '@/config/themes';
+import React, { createContext, useContext, useEffect, useState } from "react";
+import { ThemeType, ColorScheme, colorSchemes, isColorScheme } from "@/config/themes";
 
 interface ThemeContextType {
   theme: ThemeType;
   colorScheme: ColorScheme;
   toggleTheme: () => void;
   setColorScheme: (scheme: ColorScheme) => void;
-  colors: typeof themes.dark.purple;
+  colors: (typeof colorSchemes)[ColorScheme];
 }
 
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 
+const readStorage = (key: string) => {
+  try {
+    return localStorage.getItem(key);
+  } catch {
+    return null;
+  }
+};
+
+const writeStorage = (key: string, value: string) => {
+  try {
+    localStorage.setItem(key, value);
+  } catch {
+    // Storage can be unavailable (private mode); the theme still applies for this session.
+  }
+};
+
 export const ThemeProvider = ({ children }: { children: React.ReactNode }) => {
-  // Initialize theme from localStorage or system preference
-  const [theme, setTheme] = useState<ThemeType>(() => {
-    if (typeof window === 'undefined') return 'dark';
-    
-    const savedTheme = localStorage.getItem('theme') as ThemeType;
-    if (savedTheme) return savedTheme;
-    
-    return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
-  });
+  // The design is built dark-first, so dark is the default unless the user picked light.
+  const [theme, setTheme] = useState<ThemeType>(() =>
+    readStorage("theme") === "light" ? "light" : "dark"
+  );
 
   const [colorScheme, setColorScheme] = useState<ColorScheme>(() => {
-    if (typeof window === 'undefined') return 'purple';
-    return (localStorage.getItem('colorScheme') as ColorScheme) || 'purple';
+    const saved = readStorage("colorScheme");
+    return isColorScheme(saved) ? saved : "lime";
   });
 
-  // Apply theme to document
   useEffect(() => {
     const root = window.document.documentElement;
-    const isDark = theme === 'dark';
-
-    // Remove existing theme classes
-    root.classList.remove('light', 'dark');
-    
-    // Add new theme class
+    root.classList.remove("light", "dark");
     root.classList.add(theme);
-    
-    // Update meta theme-color
+    root.style.colorScheme = theme;
     document
       .querySelector('meta[name="theme-color"]')
-      ?.setAttribute('content', isDark ? '#1a1d2d' : '#ffffff');
-
-    localStorage.setItem('theme', theme);
+      ?.setAttribute("content", theme === "dark" ? "#08090a" : "#f6f7f4");
+    writeStorage("theme", theme);
   }, [theme]);
 
-  // Apply color scheme
   useEffect(() => {
-    const root = window.document.documentElement;
-    root.setAttribute('data-theme', colorScheme);
-    localStorage.setItem('colorScheme', colorScheme);
+    window.document.documentElement.setAttribute("data-theme", colorScheme);
+    writeStorage("colorScheme", colorScheme);
   }, [colorScheme]);
 
-  // System theme change listener
-  useEffect(() => {
-    const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
-    
-    const handleChange = (e: MediaQueryListEvent) => {
-      if (!localStorage.getItem('theme')) {
-        setTheme(e.matches ? 'dark' : 'light');
-      }
-    };
-
-    mediaQuery.addEventListener('change', handleChange);
-    return () => mediaQuery.removeEventListener('change', handleChange);
-  }, []);
-
-  const toggleTheme = () => {
-    setTheme((prev) => {
-      const newTheme = prev === 'dark' ? 'light' : 'dark';
-      localStorage.setItem('theme', newTheme);
-      return newTheme;
-    });
-  };
-
-  const colors = themes[theme][colorScheme];
+  const toggleTheme = () => setTheme((prev) => (prev === "dark" ? "light" : "dark"));
 
   return (
     <ThemeContext.Provider
@@ -84,7 +63,7 @@ export const ThemeProvider = ({ children }: { children: React.ReactNode }) => {
         colorScheme,
         toggleTheme,
         setColorScheme,
-        colors,
+        colors: colorSchemes[colorScheme],
       }}
     >
       {children}
@@ -92,10 +71,11 @@ export const ThemeProvider = ({ children }: { children: React.ReactNode }) => {
   );
 };
 
+// eslint-disable-next-line react-refresh/only-export-components
 export const useTheme = () => {
   const context = useContext(ThemeContext);
   if (context === undefined) {
-    throw new Error('useTheme must be used within a ThemeProvider');
+    throw new Error("useTheme must be used within a ThemeProvider");
   }
   return context;
-}; 
+};
